@@ -1,0 +1,37 @@
+{
+  "name": "avantis-trader-sdk",
+  "version": "1.0.0",
+  "description": "TypeScript SDK for interacting with Avantis decentralized leveraged trading platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "avantis",
+    "trading",
+    "defi",
+    "perpetuals",
+    "leverage",
+    "ethereum",
+    "web3"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "^6.13.0",
+    "zod": "^3.23.0",
+    "ws": "^8.18.0",
+    "@aws-sdk/client-kms": "^3.700.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.6.0",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.0",
+    "ts-jest": "^29.2.0"
+  }
+}
