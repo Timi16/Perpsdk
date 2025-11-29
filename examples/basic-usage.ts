@@ -6,11 +6,11 @@ import { TraderClient, TradeInput, TradeInputOrderType } from '../src';
 
 async function main() {
   // Initialize client with your RPC endpoint
-  const providerUrl = 'https://your-rpc-endpoint.com';
+  const providerUrl = 'https://base-rpc.publicnode.com';
   const client = new TraderClient(providerUrl);
 
   // Set up signer with your private key (for local development)
-  const privateKey = 'your-private-key-here';
+  const privateKey = '';
   client.setLocalSigner(privateKey);
 
   // Get your address
@@ -51,6 +51,7 @@ async function main() {
     sl: 0, // Stop loss (0 = none)
     orderType: TradeInputOrderType.MARKET,
     maxSlippageP: 1, // 1% max slippage
+    referrer: "0xca4d3f16a1deef067875ec01a9f683f67a91d947"
   };
 
   // Build trade transaction

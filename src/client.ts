@@ -12,15 +12,31 @@ import { TradingParametersRPC } from './rpc/trading_parameters';
 import { BlendedRPC } from './rpc/blended';
 import { TradeRPC } from './rpc/trade';
 import { SnapshotRPC } from './rpc/snapshot';
+import { TradingOperationsRPC } from './rpc/trading_operations';
+import { DelegationRPC } from './rpc/delegation';
+import { PairInfoQueriesRPC } from './rpc/pair_info_queries';
+import { ReferralOperationsRPC } from './rpc/referral_operations';
+import { MulticallRPC } from './rpc/multicall';
 import { fromBlockchain6 } from './types';
+import {
+  ERC20_ABI,
+  TRADING_ABI,
+  TRADING_STORAGE_ABI,
+  PAIR_STORAGE_ABI,
+  PAIR_INFOS_ABI,
+  PRICE_AGGREGATOR_ABI,
+  REFERRAL_ABI,
+  MULTICALL_ABI,
+} from './abis';
 
 /**
  * Main client for interacting with Avantis trading platform
  */
 export class TraderClient {
   public provider: JsonRpcProvider;
-  private signer?: BaseSigner;
+ signer?: BaseSigner;
   public feedClient?: FeedClient;
+
 
   // Contracts
   private contracts: Map<string, Contract> = new Map();
@@ -34,6 +50,13 @@ export class TraderClient {
   public blendedParams: BlendedRPC;
   public tradeRPC: TradeRPC;
   public snapshotRPC: SnapshotRPC;
+
+  // New trading modules
+  public tradingOps: TradingOperationsRPC;
+  public delegation: DelegationRPC;
+  public pairInfoQueries: PairInfoQueriesRPC;
+  public referral: ReferralOperationsRPC;
+  public multicall: MulticallRPC;
 
   /**
    * Create a new TraderClient
@@ -49,6 +72,7 @@ export class TraderClient {
     this.provider = new JsonRpcProvider(providerUrl);
     this.signer = signer;
     this.feedClient = feedClient;
+
 
     // Initialize RPC modules
     this.initializeContracts();
@@ -67,7 +91,8 @@ export class TraderClient {
       this.provider,
       pairStorage,
       pairInfos,
-      this.pairsCache
+      this.pairsCache,
+      tradingStorage
     );
 
     this.categoryParams = new CategoryParametersRPC(
@@ -109,70 +134,69 @@ export class TraderClient {
       this.feeParams,
       this.blendedParams
     );
+
+    // Initialize new trading modules
+    this.tradingOps = new TradingOperationsRPC(
+      trading,
+      tradingStorage,
+      this.signer
+    );
+
+    this.delegation = new DelegationRPC(
+      trading,
+      this.signer
+    );
+
+    this.pairInfoQueries = new PairInfoQueriesRPC(
+      pairInfos,
+      this.getContract('PriceAggregator')
+    );
+
+    this.referral = new ReferralOperationsRPC(
+      referral,
+      this.signer
+    );
+
+    this.multicall = new MulticallRPC(
+      this.getContract('Multicall')
+    );
   }
 
   /**
    * Initialize contract instances
    */
   private initializeContracts(): void {
-    // Minimal ABIs - you should replace these with full ABIs
-    const erc20ABI = [
-      'function balanceOf(address) view returns (uint256)',
-      'function allowance(address, address) view returns (uint256)',
-      'function approve(address, uint256) returns (bool)',
-    ];
-
-    const minimalABI = [
-      'function pairs(uint256) view returns (tuple)',
-      'function pairsCount() view returns (uint256)',
-      'function openInterestUsdc(uint256, uint256) view returns (uint256)',
-      'function groupOI(uint256, uint256) view returns (uint256)',
-      'function groupCollateral(uint256, bool) view returns (uint256)',
-      'function getOpenTrades(address) view returns (tuple[])',
-      'function openTrade(tuple, uint256, uint256, address) payable',
-      'function closeTradeMarket(uint256, uint256)',
-      'function updateMargin(uint256, uint256, uint256, bool)',
-      'function updateTpSl(uint256, uint256, uint256, uint256)',
-      'function cancelOpenOrder(uint256, uint256)',
-      'function getExecutionFee() view returns (uint256)',
-      'function getPriceImpactP(uint256, bool, uint256) view returns (uint256)',
-      'function getOpenFeeUsdc(uint256, uint256, bool) view returns (uint256)',
-      'function getPairMarginFeeP(uint256) view returns (uint256)',
-      'function getLossProtectionTier(uint256, uint256) view returns (uint256)',
-      'function getLossProtectionP(uint256, uint256) view returns (uint256)',
-      'function getReferralRebateP(address, address) view returns (uint256)',
-      'function onePercentDepthAboveUsdc(uint256) view returns (uint256)',
-      'function onePercentDepthBelowUsdc(uint256) view returns (uint256)',
-    ];
-
-    // Initialize contracts with addresses from config
     this.contracts.set(
       'TradingStorage',
-      new Contract(CONTRACTS.TradingStorage, minimalABI, this.provider)
+      new Contract(CONTRACTS.TradingStorage, TRADING_STORAGE_ABI, this.provider)
     );
     this.contracts.set(
       'PairStorage',
-      new Contract(CONTRACTS.PairStorage, minimalABI, this.provider)
+      new Contract(CONTRACTS.PairStorage, PAIR_STORAGE_ABI, this.provider)
     );
     this.contracts.set(
       'PairInfos',
-      new Contract(CONTRACTS.PairInfos, minimalABI, this.provider)
+      new Contract(CONTRACTS.PairInfos, PAIR_INFOS_ABI, this.provider)
     );
     this.contracts.set(
       'PriceAggregator',
-      new Contract(CONTRACTS.PriceAggregator, minimalABI, this.provider)
+      new Contract(CONTRACTS.PriceAggregator, PRICE_AGGREGATOR_ABI, this.provider)
     );
     this.contracts.set(
       'USDC',
-      new Contract(CONTRACTS.USDC, erc20ABI, this.provider)
+      new Contract(CONTRACTS.USDC, ERC20_ABI, this.provider)
     );
     this.contracts.set(
       'Trading',
-      new Contract(CONTRACTS.Trading, minimalABI, this.provider)
+      new Contract(CONTRACTS.Trading, TRADING_ABI, this.provider)
     );
     this.contracts.set(
       'Referral',
-      new Contract(CONTRACTS.Referral, minimalABI, this.provider)
+      new Contract(CONTRACTS.Referral, REFERRAL_ABI, this.provider)
+    );
+    this.contracts.set(
+      'Multicall',
+      new Contract(CONTRACTS.Multicall, MULTICALL_ABI, this.provider)
     );
   }
 
@@ -195,6 +219,9 @@ export class TraderClient {
    */
   setSigner(signer: BaseSigner): void {
     this.signer = signer;
+    this.tradingOps.setSigner(signer);
+    this.delegation.setSigner(signer);
+    this.referral.setSigner(signer);
   }
 
   /**
@@ -203,6 +230,7 @@ export class TraderClient {
    */
   setLocalSigner(privateKey: string): void {
     this.signer = new LocalSigner(privateKey, this.provider);
+    this.setSigner(this.signer);
   }
 
   /**
@@ -212,6 +240,7 @@ export class TraderClient {
    */
   setAwsKmsSigner(kmsKeyId: string, region: string = 'us-east-1'): void {
     this.signer = new KMSSigner(kmsKeyId, this.provider, region);
+    this.setSigner(this.signer);
   }
 
   /**

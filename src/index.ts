@@ -25,6 +25,11 @@ export { TradingParametersRPC } from './rpc/trading_parameters';
 export { BlendedRPC } from './rpc/blended';
 export { TradeRPC } from './rpc/trade';
 export { SnapshotRPC } from './rpc/snapshot';
+export { TradingOperationsRPC } from './rpc/trading_operations';
+export { DelegationRPC } from './rpc/delegation';
+export { PairInfoQueriesRPC } from './rpc/pair_info_queries';
+export { ReferralOperationsRPC } from './rpc/referral_operations';
+export { MulticallRPC, type MulticallCall, type MulticallResult } from './rpc/multicall';
 
 // Types and enums
 export {
@@ -47,12 +52,31 @@ export {
   type PairData,
   type Group,
   type Snapshot,
+  type Trade,
+  type TradeInfo,
+  type OpenLimitOrder,
+  type ReferralTier,
+  type ReferralDiscount,
   type ContractCallOptions,
   type TransactionReceipt,
+  type PairsBackendReturn,
+  type ContractPairInfo,
+  type PairStruct,
+  type GroupStruct,
+  type FeeStruct,
+  type FeedStruct,
+  type BackupFeedStruct,
+  type LeverageStruct,
+  type ValuesStruct,
+  type PnlFeesStruct,
   fromBlockchain10,
   fromBlockchain6,
   toBlockchain10,
   toBlockchain6,
+  fromBlockchain12,
+  toBlockchain12,
+  fromBlockchain18,
+  toBlockchain18,
 } from './types';
 
 // Configuration

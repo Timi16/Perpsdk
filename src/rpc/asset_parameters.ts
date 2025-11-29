@@ -17,17 +17,20 @@ export class AssetParametersRPC {
   private provider: Provider;
   private pairStorageContract: Contract;
   private pairInfosContract: Contract;
+  private tradingStorageContract: Contract;
   private pairsCache: PairsCache;
 
   constructor(
     provider: Provider,
     pairStorageContract: Contract,
     pairInfosContract: Contract,
-    pairsCache: PairsCache
+    pairsCache: PairsCache,
+    tradingStorageContract: Contract
   ) {
     this.provider = provider;
     this.pairStorageContract = pairStorageContract;
     this.pairInfosContract = pairInfosContract;
+    this.tradingStorageContract = tradingStorageContract;
     this.pairsCache = pairsCache;
   }
 
@@ -42,8 +45,8 @@ export class AssetParametersRPC {
     for (const [pairIndex, pairInfo] of pairs) {
       limits.set(pairIndex, {
         pairIndex,
-        maxLong: pairInfo.maxOpenInterestUsdc,
-        maxShort: pairInfo.maxOpenInterestUsdc,
+        maxLong: pairInfo.maxLongOiP,
+        maxShort: pairInfo.maxShortOiP,
       });
     }
 
@@ -59,17 +62,28 @@ export class AssetParametersRPC {
     const oi = new Map<number, OpenInterest>();
 
     for (const [pairIndex] of pairs) {
-      const pairOI = await this.pairStorageContract.openInterestUsdc(pairIndex, 0); // 0 = long
-      const pairOIShort = await this.pairStorageContract.openInterestUsdc(pairIndex, 1); // 1 = short
+      try {
+        // Use TradingStorage contract which has openInterestUSDC method
+        const pairOILong = await this.tradingStorageContract.openInterestUSDC(pairIndex, 0); // 0 = long
+        const pairOIShort = await this.tradingStorageContract.openInterestUSDC(pairIndex, 1); // 1 = short
 
-      const limits = await this.getOILimits();
-      const maxOI = limits.get(pairIndex)?.maxLong || 0;
+        const limits = await this.getOILimits();
+        const maxOI = limits.get(pairIndex)?.maxLong || 0;
 
-      oi.set(pairIndex, {
-        long: fromBlockchain6(pairOI),
-        short: fromBlockchain6(pairOIShort),
-        max: maxOI,
-      });
+        oi.set(pairIndex, {
+          long: fromBlockchain6(pairOILong),
+          short: fromBlockchain6(pairOIShort),
+          max: maxOI,
+        });
+      } catch (error) {
+        console.error(`Error getting OI for pair ${pairIndex}:`, error);
+        // Set default values on error
+        oi.set(pairIndex, {
+          long: 0,
+          short: 0,
+          max: 0,
+        });
+      }
     }
 
     return oi;

@@ -1,5 +1,5 @@
 import { Contract, Provider } from 'ethers';
-import { PairInfo, PairInfoSchema, fromBlockchain10, fromBlockchain6 } from '../types';
+import { ContractPairInfo, PairInfo, PairInfoSchema, PairsBackendReturn, fromBlockchain10, fromBlockchain6 } from '../types';
 import { API_ENDPOINTS } from '../config';
 
 /**
@@ -36,19 +36,20 @@ export class PairsCache {
 
       // Fetch all pairs
       for (let i = 0; i < count; i++) {
-        const pairData = await this.pairStorageContract.pairs(i);
-
+        const pairData = await this.getOtherPairInfoFromIndex(i);
+       const pair = await this.getPairInfoNameFromIndex(i)
         const pairInfo: PairInfo = {
-          from: pairData.from,
-          to: pairData.to,
+          from: pair.from,
+          to: pair.to,
           spread: {
-            min: fromBlockchain10(pairData.spreadP || pairData.spread?.min || 0),
-            max: fromBlockchain10(pairData.spreadP || pairData.spread?.max || 0),
+            min: fromBlockchain10(pairData.spreadP ),
+            max: fromBlockchain10(pairData.spreadP ),
           },
           groupIndex: Number(pairData.groupIndex),
           feeIndex: Number(pairData.feeIndex),
-          maxLeverage: fromBlockchain10(pairData.maxLeverage),
-          maxOpenInterestUsdc: fromBlockchain6(pairData.maxOpenInterestUsdc || 0),
+          maxLeverage: fromBlockchain10(pairData.leverages.maxLeverage),
+          maxShortOiP: fromBlockchain10( pairData.values.maxShortOiP),
+          maxLongOiP: fromBlockchain10( pairData.values.maxLongOiP)
         };
 
         pairs.set(i, pairInfo);
@@ -64,6 +65,113 @@ export class PairsCache {
       throw error;
     }
   }
+
+async getPairBackend(index: number): Promise<PairsBackendReturn> {
+  const [pair, group, fee] = await this.pairStorageContract.pairsBackend(index);
+
+  const mapped: PairsBackendReturn = {
+    pair: {
+      feed: {
+        maxOpenDeviationP: pair.feed.maxOpenDeviationP,
+        maxCloseDeviationP: pair.feed.maxCloseDeviationP,
+        feedId: pair.feed.feedId,
+      },
+      backupFeed: {
+        maxDeviationP: pair.backupFeed.maxDeviationP,
+        feedId: pair.backupFeed.feedId,
+      },
+      spreadP: pair.spreadP,
+      pnlSpreadP: pair.pnlSpreadP,
+      leverages: {
+        minLeverage: pair.leverages.minLeverage,
+        maxLeverage: pair.leverages.maxLeverage,
+        pnlMinLeverage: pair.leverages.pnlMinLeverage,
+        pnlMaxLeverage: pair.leverages.pnlMaxLeverage,
+      },
+      priceImpactMultiplier: pair.priceImpactMultiplier,
+      skewImpactMultiplier: pair.skewImpactMultiplier,
+      groupIndex: pair.groupIndex,
+      feeIndex: pair.feeIndex,
+      values: {
+        maxGainP: pair[9].maxGainP,
+        maxSlP: pair[9].maxSlP,
+        maxLongOiP: pair[9].maxLongOiP,
+        maxShortOiP: pair[9].maxShortOiP,
+        groupOpenInterestPercentageP: pair[9].groupOpenInterestPercentageP,
+        maxWalletOIP: pair[9].maxWalletOIP,
+        isUSDCAligned: pair[9].isUSDCAligned,
+      },
+    },
+
+    group: {
+      name: group.name,
+      maxOpenInterestP: group.maxOpenInterestP,
+      isSpreadDynamic: group.isSpreadDynamic,
+    },
+
+    fee: {
+      openFeeP: fee.openFeeP,
+      closeFeeP: fee.closeFeeP,
+      limitOrderFeeP: fee.limitOrderFeeP,
+      minLevPosUSDC: fee.minLevPosUSDC,
+      pnlFees: {
+        numTiers: fee.pnlFees.numTiers,
+        tierP: [...fee.pnlFees.tierP],
+        feesP: [...fee.pnlFees.feesP],
+      },
+    },
+  };
+
+  return mapped;
+}
+
+   getPairInfoNameFromIndex = async (index:number) :Promise<{from:string, to:string}>=>{
+    const pairData = await this.pairStorageContract.getPairData(index)
+    return {
+      from: pairData.from,
+      to: pairData.to
+    }
+   }
+
+ getOtherPairInfoFromIndex = async (index: number): Promise<ContractPairInfo> => {
+  const pairData = await this.pairStorageContract.pairs(index);
+const values = pairData[9]
+  const result: ContractPairInfo = {
+    feed: {
+      maxOpenDeviationP: pairData.feed.maxOpenDeviationP,
+      maxCloseDeviationP: pairData.feed.maxCloseDeviationP,
+      feedId: pairData.feed.feedId,
+    },
+    backupFeed: {
+      maxDeviationP: pairData.backupFeed.maxDeviationP,
+      feedId: pairData.backupFeed.feedId,
+    },
+    spreadP: pairData.spreadP,
+    pnlSpreadP: pairData.pnlSpreadP,
+    leverages: {
+      minLeverage: pairData.leverages.minLeverage,
+      maxLeverage: pairData.leverages.maxLeverage,
+      pnlMinLeverage: pairData.leverages.pnlMinLeverage,
+      pnlMaxLeverage: pairData.leverages.pnlMaxLeverage,
+    },
+    priceImpactMultiplier: pairData.priceImpactMultiplier,
+    skewImpactMultiplier: pairData.skewImpactMultiplier,
+    groupIndex: pairData.groupIndex,
+    feeIndex: pairData.feeIndex,
+    values: {
+      maxGainP: values.maxGainP,
+      maxSlP: values.maxSlP,
+      maxLongOiP: values.maxLongOiP,
+      maxShortOiP: values.maxShortOiP,
+      groupOpenInterestPercentageP: values.groupOpenInterestPercentageP,
+      maxWalletOIP: values.maxWalletOIP,
+      isUSDCAligned: values.isUSDCAligned,
+    },
+  };
+
+  return result;
+};
+
 
   /**
    * Get pair information from socket API

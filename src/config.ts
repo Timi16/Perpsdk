@@ -15,18 +15,17 @@ export interface ContractAddresses {
 }
 
 /**
- * Mainnet contract addresses for Avantis
- * Update these addresses based on the network you're using
+ * Mainnet contract addresses for Avantis (Base Network)
  */
 export const CONTRACTS: ContractAddresses = {
-  TradingStorage: '0x0000000000000000000000000000000000000000', // Replace with actual address
-  PairStorage: '0x0000000000000000000000000000000000000000', // Replace with actual address
-  PairInfos: '0x0000000000000000000000000000000000000000', // Replace with actual address
-  PriceAggregator: '0x0000000000000000000000000000000000000000', // Replace with actual address
-  USDC: '0x0000000000000000000000000000000000000000', // Replace with actual address
-  Trading: '0x0000000000000000000000000000000000000000', // Replace with actual address
-  Multicall: '0x0000000000000000000000000000000000000000', // Replace with actual address
-  Referral: '0x0000000000000000000000000000000000000000', // Replace with actual address
+  TradingStorage: '0x8a311D7048c35985aa31C131B9A13e03a5f7422d',
+  PairStorage: '0x5db3772136e5557EFE028Db05EE95C84D76faEC4',
+  PairInfos: '0x81F22d0Cc22977c91bEfE648C9fddf1f2bd977e5',
+  PriceAggregator: '0x64e2625621970F8cfA17B294670d61CB883dA511',
+  USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  Trading: '0x44914408af82bC9983bbb330e3578E1105e11d4e',
+  Multicall: '0xb7125506Ff25211c4C51DFD8DdED00BE6Fa8Cbf7',
+  Referral: '0x1A110bBA13A1f16cCa4b79758BD39290f29De82D',
 };
 
 /**

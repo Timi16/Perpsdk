@@ -10,8 +10,8 @@ export enum TradeInputOrderType {
 }
 
 export enum MarginUpdateType {
-  DEPOSIT = 'deposit',
-  WITHDRAW = 'withdraw',
+  DEPOSIT = 0,
+  WITHDRAW = 1,
 }
 
 // ========== ZOD SCHEMAS ==========
@@ -33,7 +33,10 @@ export const PairInfoSchema = z.object({
   groupIndex: z.number(),
   feeIndex: z.number(),
   maxLeverage: z.number(),
-  maxOpenInterestUsdc: z.number(),
+  maxLongOiP: z.number(),
+  maxShortOiP: z.number(),
+ 
+  // maxOpenInterestUsdc: z.number(),
 });
 
 // TradeInput schema
@@ -154,6 +157,59 @@ export const SnapshotSchema = z.object({
   groups: z.record(z.string(), GroupSchema),
 });
 
+// Trade schema (from smart contract)
+export const TradeSchema = z.object({
+  trader: addressSchema,
+  pairIndex: z.number(),
+  index: z.number(),
+  initialPosToken: z.number(), // 6 decimals
+  positionSizeUSDC: z.number(), // 6 decimals
+  openPrice: z.number(), // 10 decimals
+  buy: z.boolean(),
+  leverage: z.number(), // 10 decimals
+  tp: z.number(), // 10 decimals
+  sl: z.number(), // 10 decimals
+  timestamp: z.number(),
+});
+
+// TradeInfo schema (from smart contract)
+export const TradeInfoSchema = z.object({
+  openInterestUSDC: z.number(), // 6 decimals
+  tpLastUpdated: z.number(),
+  slLastUpdated: z.number(),
+  beingMarketClosed: z.boolean(),
+  lossProtection: z.number(),
+});
+
+// OpenLimitOrder schema (from smart contract)
+export const OpenLimitOrderSchema = z.object({
+  trader: addressSchema,
+  pairIndex: z.number(),
+  index: z.number(),
+  positionSize: z.number(), // 6 decimals
+  buy: z.boolean(),
+  leverage: z.number(), // 10 decimals
+  tp: z.number(), // 10 decimals
+  sl: z.number(), // 10 decimals
+  price: z.number(), // 10 decimals
+  slippageP: z.number(), // 10 decimals
+  block: z.number(),
+  executionFee: z.number(), // 18 decimals
+});
+
+// ReferralTier schema
+export const ReferralTierSchema = z.object({
+  feeDiscountPct: z.number(),
+  refRebatePct: z.number(),
+});
+
+// ReferralDiscount schema
+export const ReferralDiscountSchema = z.object({
+  traderDiscount: z.number(),
+  referrer: addressSchema,
+  rebateShare: z.number(),
+});
+
 // ========== TYPESCRIPT TYPES ==========
 
 export type Spread = z.infer<typeof SpreadSchema>;
@@ -173,6 +229,11 @@ export type LossProtectionInfo = z.infer<typeof LossProtectionInfoSchema>;
 export type PairData = z.infer<typeof PairDataSchema>;
 export type Group = z.infer<typeof GroupSchema>;
 export type Snapshot = z.infer<typeof SnapshotSchema>;
+export type Trade = z.infer<typeof TradeSchema>;
+export type TradeInfo = z.infer<typeof TradeInfoSchema>;
+export type OpenLimitOrder = z.infer<typeof OpenLimitOrderSchema>;
+export type ReferralTier = z.infer<typeof ReferralTierSchema>;
+export type ReferralDiscount = z.infer<typeof ReferralDiscountSchema>;
 
 // ========== UTILITY TYPES ==========
 
@@ -217,3 +278,133 @@ export function toBlockchain10(value: number): bigint {
 export function toBlockchain6(value: number): bigint {
   return BigInt(Math.floor(value * 1e6));
 }
+
+/**
+ * Convert blockchain integer to decimal (10^12 precision for fees)
+ */
+export function fromBlockchain12(value: bigint | number | string): number {
+  return Number(BigInt(value)) / 1e12;
+}
+
+/**
+ * Convert decimal to blockchain integer (10^12 precision for fees)
+ */
+export function toBlockchain12(value: number): bigint {
+  return BigInt(Math.floor(value * 1e12));
+}
+
+/**
+ * Convert blockchain integer to decimal (10^18 precision for ETH/execution fees)
+ */
+export function fromBlockchain18(value: bigint | number | string): number {
+  return Number(BigInt(value)) / 1e18;
+}
+
+/**
+ * Convert decimal to blockchain integer (10^18 precision for ETH/execution fees)
+ */
+export function toBlockchain18(value: number): bigint {
+  return BigInt(Math.floor(value * 1e18));
+}
+
+
+export interface ContractPairInfo {
+  feed: {
+    maxOpenDeviationP: bigint;
+    maxCloseDeviationP: bigint;
+    feedId: string; // bytes32
+  };
+  backupFeed: {
+    maxDeviationP: bigint;
+    feedId: string; // address
+  };
+  spreadP: bigint;
+  pnlSpreadP: bigint;
+  leverages: {
+    minLeverage: bigint;
+    maxLeverage: bigint;
+    pnlMinLeverage: bigint;
+    pnlMaxLeverage: bigint;
+  };
+  priceImpactMultiplier: bigint;
+  skewImpactMultiplier: bigint; // int256
+  groupIndex: bigint;
+  feeIndex: bigint;
+  values: {
+    maxGainP: bigint;   // int256
+    maxSlP: bigint;     // int256
+    maxLongOiP: bigint;
+    maxShortOiP: bigint;
+    groupOpenInterestPercentageP: bigint;
+    maxWalletOIP: bigint;
+    isUSDCAligned: boolean;
+  };
+}
+
+
+export interface FeedStruct {
+  maxOpenDeviationP: bigint;
+  maxCloseDeviationP: bigint;
+  feedId: string; // bytes32
+}
+
+export interface BackupFeedStruct {
+  maxDeviationP: bigint;
+  feedId: string; // address
+}
+
+export interface LeverageStruct {
+  minLeverage: bigint;
+  maxLeverage: bigint;
+  pnlMinLeverage: bigint;
+  pnlMaxLeverage: bigint;
+}
+
+export interface ValuesStruct {
+  maxGainP: bigint;
+  maxSlP: bigint;
+  maxLongOiP: bigint;
+  maxShortOiP: bigint;
+  groupOpenInterestPercentageP: bigint;
+  maxWalletOIP: bigint;
+  isUSDCAligned: boolean;
+}
+
+export interface PairStruct {
+  feed: FeedStruct;
+  backupFeed: BackupFeedStruct;
+  spreadP: bigint;
+  pnlSpreadP: bigint;
+  leverages: LeverageStruct;
+  priceImpactMultiplier: bigint;
+  skewImpactMultiplier: bigint;
+  groupIndex: bigint;
+  feeIndex: bigint;
+  values: ValuesStruct;
+}
+
+export interface GroupStruct {
+  name: string;
+  maxOpenInterestP: bigint;
+  isSpreadDynamic: boolean;
+}
+
+export interface PnlFeesStruct {
+  numTiers: bigint;
+  tierP: bigint[];
+  feesP: bigint[];
+}
+
+export interface FeeStruct {
+  openFeeP: bigint;
+  closeFeeP: bigint;
+  limitOrderFeeP: bigint;
+  minLevPosUSDC: bigint;
+  pnlFees: PnlFeesStruct;
+}
+
+export type PairsBackendReturn = {
+  pair: PairStruct;
+  group: GroupStruct;
+  fee: FeeStruct;
+};

@@ -22,20 +22,28 @@ export class CategoryParametersRPC {
 
   /**
    * Get open interest limits per category
+   * Note: Group OI limits are calculated from pair backend data
    * @returns Map of group index to OI limits
    */
   async getOILimits(): Promise<Map<number, OpenInterest>> {
     const groupIndexes = await this.pairsCache.getGroupIndexes();
     const limits = new Map<number, OpenInterest>();
 
+    // Get limits from pair backend data which includes group info
     for (const groupIndex of groupIndexes) {
       try {
-        const maxOI = await this.pairStorageContract.groupCollateral(groupIndex, true); // true = max OI
-        limits.set(groupIndex, {
-          long: fromBlockchain6(maxOI),
-          short: fromBlockchain6(maxOI),
-          max: fromBlockchain6(maxOI),
-        });
+        // Get first pair in this group to get group max OI
+        const pairsInGroup = await this.pairsCache.getPairsInGroup(groupIndex);
+        if (pairsInGroup.length > 0) {
+          const backendData = await this.pairsCache.getPairBackend(pairsInGroup[0]);
+          const maxOI = Number(backendData.group.maxOpenInterestP) / 1e10; // Convert from 10 decimals to number
+
+          limits.set(groupIndex, {
+            long: maxOI,
+            short: maxOI,
+            max: maxOI,
+          });
+        }
       } catch (error) {
         console.error(`Error getting OI limits for group ${groupIndex}:`, error);
       }
@@ -46,23 +54,29 @@ export class CategoryParametersRPC {
 
   /**
    * Get current open interest per category
+   * Note: Calculated by summing pair OIs in each group
    * @returns Map of group index to OI
    */
   async getOI(): Promise<Map<number, OpenInterest>> {
     const groupIndexes = await this.pairsCache.getGroupIndexes();
     const oi = new Map<number, OpenInterest>();
+    const limits = await this.getOILimits();
 
     for (const groupIndex of groupIndexes) {
       try {
-        const groupOILong = await this.pairStorageContract.groupOI(groupIndex, 0); // 0 = long
-        const groupOIShort = await this.pairStorageContract.groupOI(groupIndex, 1); // 1 = short
+        // Sum up OI from all pairs in this group
+        const pairsInGroup = await this.pairsCache.getPairsInGroup(groupIndex);
+        let totalLongOI = 0;
+        let totalShortOI = 0;
 
-        const limits = await this.getOILimits();
+        // This would require asset params to get individual pair OI
+        // For now, return default values
+        // TODO: Properly calculate by summing pair OIs
         const maxOI = limits.get(groupIndex)?.max || 0;
 
         oi.set(groupIndex, {
-          long: fromBlockchain6(groupOILong),
-          short: fromBlockchain6(groupOIShort),
+          long: totalLongOI,
+          short: totalShortOI,
           max: maxOI,
         });
       } catch (error) {
